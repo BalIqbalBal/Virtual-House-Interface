@@ -1,0 +1,167 @@
+{% extends 'layout.html' %}
+
+{% block title %}Upload and Generate{% endblock %}
+
+{% block content %}
+<div style="display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 50px;
+    gap: 40px;
+    padding: 50px;
+    background-color: #ffffff; 
+    border-radius: 15px; 
+    box-shadow: 0px 8px 30px rgba(0, 0, 0, 0.2); ">
+    <!-- Upload Video Section -->
+    <div style="width: 100%; max-width: 500px;">
+        <h1 style="font-size: 2rem; color: #2c3e50; margin-bottom: 15px; text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.1);">
+            Upload Your Video
+        </h1>
+        <p style="color: #7f8c8d; font-size: 1rem; margin-bottom: 25px;">
+            Select a video file to upload and save it to the server.
+        </p>
+        <form action="/upload_video" method="POST" enctype="multipart/form-data" style="
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.1);
+            width: 100%;
+        ">
+            <div style="margin-bottom: 20px;">
+                <input type="file" name="video" accept="video/*" required style="
+                    display: block;
+                    width: 100%;
+                    padding: 10px;
+                    font-size: 1rem;
+                    border: 1px solid #ccc;
+                    border-radius: 8px;
+                    background-color: #f9f9f9;
+                    color: #333;
+                ">
+            </div>
+            <button type="submit" style="
+                display: block;
+                width: 100%;
+                padding: 12px;
+                font-size: 1rem;
+                color: white;
+                background-color: #3498DB;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                transition: background-color 0.3s ease, transform 0.2s;
+            " onmouseover="this.style.backgroundColor='#2980B9'; this.style.transform='scale(1.02)'"
+               onmouseout="this.style.backgroundColor='#3498DB'; this.style.transform='scale(1)';">
+                Upload Video
+            </button>
+        </form>
+    </div>
+
+    <!-- Generate Sparse Reconstruction Section -->
+    <div style="width: 100%; max-width: 500px;">
+        <h2 style="font-size: 1.5rem; color: #2c3e50; margin-bottom: 20px;">Generate Sparse 3D Reconstruction</h2>
+        <p style="color: #7f8c8d; font-size: 1rem; margin-bottom: 25px;">
+            Select a video file to generate sparse reconstruction.
+        </p>
+        <form action="/generate_sparse_reconstruction" method="POST" style="
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.1);
+            width: 100%;
+        ">
+            <div style="margin-bottom: 20px;">
+                <label for="video-dropdown" style="font-size: 1rem; color: #2c3e50;">Select a video:</label>
+                <select name="selected_video" id="video-dropdown" required style="
+                    display: block;
+                    width: 100%;
+                    padding: 10px;
+                    font-size: 1rem;
+                    border: 1px solid #ccc;
+                    border-radius: 8px;
+                    background-color: #f9f9f9;
+                    color: #333;
+                ">
+                    {% if video_files %}
+                        {% for video in video_files %}
+                            <option value="{{ video }}">{{ video }}</option>
+                        {% endfor %}
+                    {% else %}
+                        <option value="" disabled>No videos uploaded yet</option>
+                    {% endif %}
+                </select>
+            </div>
+            <button type="submit" style="
+                display: block;
+                width: 100%;
+                padding: 12px;
+                font-size: 1rem;
+                color: white;
+                background-color: #e74c3c;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                transition: background-color 0.3s ease, transform 0.2s;
+            " onmouseover="this.style.backgroundColor='#c0392b'; this.style.transform='scale(1.02)'"
+               onmouseout="this.style.backgroundColor='#e74c3c'; this.style.transform='scale(1)';">
+                Generate Sparse Reconstruction
+            </button>
+        </form>
+    </div>
+
+    <!-- Generate 3D Section -->
+    <div style="width: 100%; max-width: 500px;">
+        <h2 style="font-size: 1.5rem; color: #2c3e50; margin-bottom: 20px;">Generate 3D Model</h2>
+        <p style="color: #7f8c8d; font-size: 1rem; margin-bottom: 25px;">
+            Select a subdirectory to generate a Dense 3D model.
+        </p>
+        <form action="/generate_dense_reconstruction" method="POST" style="
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.1);
+            width: 100%;
+        ">
+            <div style="margin-bottom: 20px;">
+                <label for="subdirectory-dropdown" style="font-size: 1rem; color: #2c3e50;">Select a subdirectory:</label>
+                <select name="selected_subdirectory" id="subdirectory-dropdown" required style="
+                    display: block;
+                    width: 100%;
+                    padding: 10px;
+                    font-size: 1rem;
+                    border: 1px solid #ccc;
+                    border-radius: 8px;
+                    background-color: #f9f9f9;
+                    color: #333;
+                ">
+                    {% if subdirectories %}
+                        {% for subdir in subdirectories %}
+                            <option value="{{ subdir }}">{{ subdir }}</option>
+                        {% endfor %}
+                    {% else %}
+                        <option value="" disabled>No subdirectories available</option>
+                    {% endif %}
+                </select>
+            </div>
+            <button type="submit" style="
+                display: block;
+                width: 100%;
+                padding: 12px;
+                font-size: 1rem;
+                color: white;
+                background-color: #27ae60;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                transition: background-color 0.3s ease, transform 0.2s;
+            " onmouseover="this.style.backgroundColor='#229954'; this.style.transform='scale(1.02)'"
+               onmouseout="this.style.backgroundColor='#27ae60'; this.style.transform='scale(1)';">
+                Generate 3D
+            </button>
+        </form>
+    </div>
+
+</div>
+
+<div style="height: 300px;"></div>
+{% endblock %}

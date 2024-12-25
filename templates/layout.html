@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Flask CMD Interface{% endblock %}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: 
+                radial-gradient(circle at 30% 40%, rgba(255, 255, 255, 0.9) 0%, transparent 60%),
+                radial-gradient(circle at 70% 60%, rgba(255, 255, 255, 0.85) 0%, transparent 60%),
+                radial-gradient(circle at 50% 50%, rgb(255, 255, 255) 0%, rgba(235, 255, 235, 0.8) 900%);
+            color: #333;
+            padding: 20px;
+            height: 100vh;
+            overflow: auto;
+        }
+
+
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .cmd-panel {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 95%;
+            max-width: 600px;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            transition: height 0.3s ease, padding 0.3s ease;
+        }
+
+        .cmd-panel.collapsed {
+            height: 50px;
+            padding: 8px;
+            overflow: hidden;
+        }
+
+        .cmd-output {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #333;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+
+        .cmd-input {
+            width: 100%;
+            padding: 12px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #333;
+            transition: border-color 0.3s;
+        }
+
+        .cmd-input:focus {
+            outline: none;
+            border-color: #4CAF50; /* Green border on focus */
+        }
+
+        .toggle-btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 8px;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 20px;
+            position: absolute;
+            top: -12px;
+            right: -12px;
+            box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, background-color 0.3s;
+        }
+
+        .toggle-btn:hover {
+            background-color: #45a049;
+        }
+
+        .toggle-btn.open {
+            transform: rotate(180deg);
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background-color: #4CAF50;
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background-color: #f4f6f9;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Main content block -->
+    <div class="container">
+        {% block content %}
+        {% endblock %}
+    </div>
+
+    <!-- CMD Panel -->
+    <div class="cmd-panel" id="cmdPanel">
+        <button class="toggle-btn" id="toggleBtn">&#9660;</button>
+
+        <div class="cmd-output" id="cmdOutput"></div>
+
+        <input type="text" id="cmdInput" class="cmd-input" placeholder="Type your command..." autofocus />
+    </div>
+
+    <script>
+        function sendCommand(command) {
+            const cmdOutput = document.getElementById('cmdOutput');
+            cmdOutput.innerHTML += `<div><strong>$ ${command}</strong></div>`;
+            
+            fetch('/execute', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `command=${encodeURIComponent(command)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                cmdOutput.innerHTML += `<div>${data.output}</div>`;
+                cmdOutput.scrollTop = cmdOutput.scrollHeight;
+            });
+        }
+
+        document.getElementById('cmdInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                const command = e.target.value;
+                e.target.value = '';
+                sendCommand(command);
+            }
+        });
+
+        document.getElementById('toggleBtn').addEventListener('click', function() {
+            const cmdPanel = document.getElementById('cmdPanel');
+            const toggleBtn = document.getElementById('toggleBtn');
+            if (cmdPanel.classList.contains('collapsed')) {
+                cmdPanel.classList.remove('collapsed');
+                toggleBtn.classList.add('open');
+            } else {
+                cmdPanel.classList.add('collapsed');
+                toggleBtn.classList.remove('open');
+            }
+        });
+    </script>
+
+</body>
+</html>

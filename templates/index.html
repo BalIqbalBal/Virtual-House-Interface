@@ -1,0 +1,40 @@
+{% extends 'layout.html' %}
+
+{% block title %}VirtualHouse Home{% endblock %}
+
+{% block content %}
+<div style="text-align: center; margin-top: 50px; font-family: 'Arial', sans-serif; color: #333;">
+    <h1 style="font-size: 3rem; color: #2C3E50; margin-bottom: 10px;">Virtual House Generator</h1>
+    <p style="font-size: 1.2rem; margin-bottom: 20px; color: #34495E; font-style: italic;">Make 3D as easily as click</p>
+    
+    <!-- Logo -->
+    <img src="/static/p.jpeg" alt="VirtualHouse Logo" style="width: 150px; height: auto; margin-bottom: 30px;">
+
+    <!-- Start Button -->
+    <div>
+        <a href="/upload" style="
+            display: inline-block;
+            margin-top: 10px;
+            padding: 15px 30px;
+            background-color: #b4cc4a;
+            color: white;
+            text-decoration: none;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        " onmouseover="
+            this.style.backgroundColor='#97b125';
+            this.style.transform='scale(1.05)';
+            this.style.boxShadow='0 6px 15px rgba(0,0,0,0.3)';
+        " onmouseout="
+            this.style.backgroundColor='#b4cc4a';
+            this.style.transform='scale(1)';
+            this.style.boxShadow='0 4px 10px rgba(0,0,0,0.2)';
+        ">
+            Start
+        </a>
+    </div>
+</div>
+{% endblock %}
