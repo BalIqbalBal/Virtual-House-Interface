@@ -57,31 +57,16 @@
         </form>
     </div>
 
-    <!-- Generate Sparse Reconstruction Section -->
-    <div style="width: 100%; max-width: 500px;">
+     <!-- Generate Sparse Reconstruction Section -->
+     <div style="width: 100%; max-width: 500px;">
         <h2 style="font-size: 1.5rem; color: #2c3e50; margin-bottom: 20px;">Generate Sparse 3D Reconstruction</h2>
         <p style="color: #7f8c8d; font-size: 1rem; margin-bottom: 25px;">
             Select a video file to generate sparse reconstruction.
         </p>
-        <form action="/generate_sparse_reconstruction" method="POST" style="
-            background-color: #ffffff;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.1);
-            width: 100%;
-        ">
+        <form id="generate-sparse-form" method="POST" style="background-color: #ffffff; padding: 20px; border-radius: 10px; box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.1); width: 100%;">
             <div style="margin-bottom: 20px;">
                 <label for="video-dropdown" style="font-size: 1rem; color: #2c3e50;">Select a video:</label>
-                <select name="selected_video" id="video-dropdown" required style="
-                    display: block;
-                    width: 100%;
-                    padding: 10px;
-                    font-size: 1rem;
-                    border: 1px solid #ccc;
-                    border-radius: 8px;
-                    background-color: #f9f9f9;
-                    color: #333;
-                ">
+                <select name="selected_video" id="video-dropdown" required style="display: block; width: 100%; padding: 10px; font-size: 1rem; border: 1px solid #ccc; border-radius: 8px; background-color: #f9f9f9; color: #333;">
                     {% if video_files %}
                         {% for video in video_files %}
                             <option value="{{ video }}">{{ video }}</option>
@@ -91,18 +76,7 @@
                     {% endif %}
                 </select>
             </div>
-            <button type="submit" style="
-                display: block;
-                width: 100%;
-                padding: 12px;
-                font-size: 1rem;
-                color: white;
-                background-color: #e74c3c;
-                border: none;
-                border-radius: 8px;
-                cursor: pointer;
-                transition: background-color 0.3s ease, transform 0.2s;
-            " onmouseover="this.style.backgroundColor='#c0392b'; this.style.transform='scale(1.02)'"
+            <button type="submit" style="display: block; width: 100%; padding: 12px; font-size: 1rem; color: white; background-color: #e74c3c; border: none; border-radius: 8px; cursor: pointer; transition: background-color 0.3s ease, transform 0.2s;" onmouseover="this.style.backgroundColor='#c0392b'; this.style.transform='scale(1.02)'"
                onmouseout="this.style.backgroundColor='#e74c3c'; this.style.transform='scale(1)';">
                 Generate Sparse Reconstruction
             </button>
@@ -115,25 +89,10 @@
         <p style="color: #7f8c8d; font-size: 1rem; margin-bottom: 25px;">
             Select a subdirectory to generate a Dense 3D model.
         </p>
-        <form action="/generate_dense_reconstruction" method="POST" style="
-            background-color: #ffffff;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.1);
-            width: 100%;
-        ">
+        <form id="generate-dense-form" method="POST" style="background-color: #ffffff; padding: 20px; border-radius: 10px; box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.1); width: 100%;">
             <div style="margin-bottom: 20px;">
                 <label for="subdirectory-dropdown" style="font-size: 1rem; color: #2c3e50;">Select a subdirectory:</label>
-                <select name="selected_subdirectory" id="subdirectory-dropdown" required style="
-                    display: block;
-                    width: 100%;
-                    padding: 10px;
-                    font-size: 1rem;
-                    border: 1px solid #ccc;
-                    border-radius: 8px;
-                    background-color: #f9f9f9;
-                    color: #333;
-                ">
+                <select name="selected_subdirectory" id="subdirectory-dropdown" required style="display: block; width: 100%; padding: 10px; font-size: 1rem; border: 1px solid #ccc; border-radius: 8px; background-color: #f9f9f9; color: #333;">
                     {% if subdirectories %}
                         {% for subdir in subdirectories %}
                             <option value="{{ subdir }}">{{ subdir }}</option>
@@ -143,18 +102,7 @@
                     {% endif %}
                 </select>
             </div>
-            <button type="submit" style="
-                display: block;
-                width: 100%;
-                padding: 12px;
-                font-size: 1rem;
-                color: white;
-                background-color: #27ae60;
-                border: none;
-                border-radius: 8px;
-                cursor: pointer;
-                transition: background-color 0.3s ease, transform 0.2s;
-            " onmouseover="this.style.backgroundColor='#229954'; this.style.transform='scale(1.02)'"
+            <button type="submit" style="display: block; width: 100%; padding: 12px; font-size: 1rem; color: white; background-color: #27ae60; border: none; border-radius: 8px; cursor: pointer; transition: background-color 0.3s ease, transform 0.2s;" onmouseover="this.style.backgroundColor='#229954'; this.style.transform='scale(1.02)'"
                onmouseout="this.style.backgroundColor='#27ae60'; this.style.transform='scale(1)';">
                 Generate 3D
             </button>
@@ -164,4 +112,85 @@
 </div>
 
 <div style="height: 300px;"></div>
+
+<!-- JavaScript for form submission handling -->
+<script>
+    // Function to listen for SSE events and update cmdOutput
+    function setupSSE(url, cmdOutput) {
+        const eventSource = new EventSource(url);
+        
+        eventSource.onmessage = function(event) {
+            // Parse the event data into a JSON object
+            const data = JSON.parse(event.data);
+            
+            // Only print the output array (not the entire status object)
+            if (data.output) {
+                cmdOutput.innerHTML += data.output.join('<br>') + '<br>'; // Join the output array into a string
+            }
+        };
+        
+        eventSource.onerror = function() {
+            // Close the connection on error and don't display anything
+            eventSource.close();
+        };
+    }
+    // Handle form submission for Generate Sparse Reconstruction
+    document.getElementById('generate-sparse-form').addEventListener('submit', function(event) {
+        event.preventDefault(); // Prevent the default form submission
+        
+        const cmdOutput = document.getElementById('cmdOutput');
+        cmdOutput.textContent = 'Processing Sparse Reconstruction...';
+
+        var formData = new FormData(this);
+
+        fetch('/generate_sparse_reconstruction', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())  // Expecting JSON response for task_id
+        .then(data => {
+            if (data.status === 'success') {
+                // Start listening for SSE events after initiating the request
+                const taskId = data.task_id;
+                setupSSE(`/generate_sparse_reconstruction?task_id=${taskId}`, cmdOutput);
+            } else {
+                throw new Error('Failed to start sparse reconstruction');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            cmdOutput.textContent = 'An unexpected error occurred.';
+        });
+    });
+
+    // Handle form submission for Generate Dense Reconstruction
+    document.getElementById('generate-dense-form').addEventListener('submit', function(event) {
+        event.preventDefault(); // Prevent the default form submission
+        
+        const cmdOutput = document.getElementById('cmdOutput');
+        cmdOutput.textContent = 'Processing Dense Reconstruction...';
+
+        var formData = new FormData(this);
+
+        fetch('/generate_dense_reconstruction', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())  // Expecting JSON response for task_id
+        .then(data => {
+            if (data.status === 'success') {
+                // Start listening for SSE events after initiating the request
+                const taskId = data.task_id;
+                setupSSE(`/generate_dense_reconstruction?task_id=${taskId}`, cmdOutput);
+            } else {
+                throw new Error('Failed to start dense reconstruction');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            cmdOutput.textContent = 'An unexpected error occurred.';
+        });
+    });
+</script>
+
 {% endblock %}

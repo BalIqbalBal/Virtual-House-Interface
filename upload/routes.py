@@ -1,14 +1,26 @@
-from flask import render_template, request, redirect, url_for, flash, jsonify, current_app
+from flask import render_template, request, redirect, url_for, flash, jsonify, current_app, Response, stream_with_context
 import os
+import json
+import time
+import threading
 
 from . import upload_bp
-from utils import execute_command
+from utils import execute_command_in_background, execute_command, get_cmd_status, cmd_status
 
-@upload_bp.route('/execute', methods=['POST'])
+
+@upload_bp.route('/execute', methods=['GET'])
 def execute():
-    cmd = request.form['command']
-    output = execute_command(cmd)
-    return jsonify({'output': output})
+    cmd = request.args.get('command')  # Get the command from the query parameters
+    
+    def generate():
+        for line in execute_command(cmd):
+            yield f"data: {json.dumps({'output': line})}\n\n"
+        yield f"data: {json.dumps({'status': 'complete'})}\n\n"
+    
+    return Response(
+        stream_with_context(generate()),
+        mimetype='text/event-stream'
+    )
 
 @upload_bp.route('/upload')
 def uploadPage():
@@ -52,50 +64,88 @@ def upload_video():
 
     return render_template('upload/index.html', video_files=video_files, subdirectories=subdirectories)
 
-@upload_bp.route('/generate_sparse_reconstruction', methods=['POST'])
+# Handle POST and GET requests for task execution and status
+@upload_bp.route('/generate_sparse_reconstruction', methods=['POST', 'GET'])
 def generate_sparse_reconstruction():
-    # Get the selected video file from the form
-    selected_video = request.form.get('selected_video')
-    
-    if not selected_video:
-        flash('No video selected for reconstruction.')
-        return redirect(url_for('upload_bp.uploadPage'))
-    
-    # Construct the command to execute
-    video_path = os.path.join(current_app.config['VIDEO_FOLDER'], selected_video)
-    output_dir = os.path.join(current_app.config['SPARSE_RECONSTRUCTION'], selected_video)  # Customize as needed
-    cmd = f"ns-process-data video --data {video_path} --output-dir {output_dir}"
-    
-    # Execute the command
-    try:
-        output = execute_command(cmd)  # Assuming `execute_command` handles subprocess calls
-        flash(f'Sparse reconstruction executed: {output}')
-    except Exception as e:
-        flash(f'Error during reconstruction: {e}')
-    
-    # Redirect back to the upload page
-    return redirect(url_for('upload_bp.uploadPage'))
+    if request.method == 'POST':
+        # Handle POST: Start the command execution
+        video_files = request.form.get('selected_video')
+        
+        if not video_files:
+            return jsonify({'status': 'error', 'message': 'No file selected for processing.'})
+        
+        file_path = os.path.join(current_app.config['VIDEO_FOLDER'], video_files)
+        output_dir = os.path.join(current_app.config['VIDEO_FOLDER'], video_files)
+        cmd = f"process-data --input {file_path} --output {output_dir}"
+        
+        # Generate a unique task_id for this request (could use a UUID or timestamp)
+        task_id = video_files
 
-@upload_bp.route('/generate_dense_reconstruction', methods=['POST'])
+        # Start the background task
+        background_thread = threading.Thread(target=execute_command_in_background, args=(cmd, task_id))
+        background_thread.start()
+
+        # Return the task ID so the client can check progress
+        return jsonify({'status': 'success', 'task_id': task_id})
+
+    elif request.method == 'GET':
+        # Handle GET: Stream the status using SSE
+        task_id = request.args.get('task_id')
+        
+        if task_id not in cmd_status:
+            return jsonify({'status': 'error', 'message': 'Invalid task ID or task not found.'})
+        
+        def generate():
+            while task_id in cmd_status:
+                status = get_cmd_status(task_id)
+                yield f"data: {json.dumps(status)}\n\n"
+                time.sleep(1)  # Sleep for a moment to avoid overwhelming the client with too many messages
+                
+                # Check if the status is "complete", then break out of the loop to stop SSE
+                if status.get('status') == 'complete':
+                    break
+        
+        return Response(generate(), mimetype='text/event-stream')
+
+@upload_bp.route('/generate_dense_reconstruction', methods=['POST', 'GET'])
 def generate_dense_reconstruction():
-    # Get the selected video file from the form
-    selected_subdirectory = request.form.get('selected_subdirectory')
-    
-    if not selected_subdirectory:
-        flash('No video selected for reconstruction.')
-        return redirect(url_for('upload_bp.uploadPage'))
-    
-    # Construct the command to execute
-    sparse_path = os.path.join(current_app.config['SPARSE_RECONSTRUCTION'], selected_subdirectory)
-    dense_dir = os.path.join(current_app.config['DENSE_RECONSTRUCTION'], selected_subdirectory)  # Customize as needed
-    cmd = f"ns-train splatfacto-w --data {sparse_path} --viewer.make-share-url True"
-    
-    # Execute the command
-    try:
-        output = execute_command(cmd)  # Assuming `execute_command` handles subprocess calls
-        flash(f'Dense reconstruction executed: {output}')
-    except Exception as e:
-        flash(f'Error during reconstruction: {e}')
-    
-    # Redirect back to the upload page
-    return redirect(url_for('upload_bp.uploadPage'))
+    if request.method == 'POST':
+        # Handle POST: Start the command execution for dense reconstruction
+        selected_subdirectory = request.form.get('selected_subdirectory')
+        
+        if not selected_subdirectory:
+            return jsonify({'status': 'error', 'message': 'No video selected for reconstruction.'})
+        
+        sparse_path = os.path.join(current_app.config['SPARSE_RECONSTRUCTION'], selected_subdirectory)
+        dense_dir = os.path.join(current_app.config['DENSE_RECONSTRUCTION'], selected_subdirectory)  # Customize as needed
+        cmd = f"ns-train splatfacto-w --data {sparse_path} --viewer.make-share-url True"
+        
+        # Generate a unique task_id for this request
+        task_id = selected_subdirectory
+
+        # Start the background task for dense reconstruction
+        background_thread = threading.Thread(target=execute_command_in_background, args=(cmd, task_id))
+        background_thread.start()
+
+        # Return the task ID so the client can check progress
+        return jsonify({'status': 'success', 'task_id': task_id})
+
+    elif request.method == 'GET':
+        # Handle GET: Stream the status using SSE for dense reconstruction
+        task_id = request.args.get('task_id')
+        
+        if task_id not in cmd_status:
+            return jsonify({'status': 'error', 'message': 'Invalid task ID or task not found.'})
+        
+        def generate():
+            while task_id in cmd_status:
+                status = get_cmd_status(task_id)
+                yield f"data: {json.dumps(status)}\n\n"
+                time.sleep(1)  # Sleep for a moment to avoid overwhelming the client with too many messages
+                
+                # Check if the status is "complete", then break out of the loop to stop SSE
+                if status.get('status') == 'complete':
+                    break
+        
+        return Response(generate(), mimetype='text/event-stream')
+

@@ -139,30 +139,43 @@
 
     <script>
         function sendCommand(command) {
-            const cmdOutput = document.getElementById('cmdOutput');
-            cmdOutput.innerHTML += `<div><strong>$ ${command}</strong></div>`;
-            
-            fetch('/execute', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: `command=${encodeURIComponent(command)}`
-            })
-            .then(response => response.json())
-            .then(data => {
-                cmdOutput.innerHTML += `<div>${data.output}</div>`;
-                cmdOutput.scrollTop = cmdOutput.scrollHeight;
-            });
-        }
+        const cmdOutput = document.getElementById('cmdOutput');
+        cmdOutput.innerHTML += `<div><strong>$ ${command}</strong></div>`;
 
-        document.getElementById('cmdInput').addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
-                const command = e.target.value;
-                e.target.value = '';
-                sendCommand(command);
+        // Open a connection to the server using EventSource for SSE
+        const eventSource = new EventSource(`/execute?command=${encodeURIComponent(command)}`);
+        
+        // Listen for events sent from the server
+        eventSource.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            
+            // Display the output received from the server
+            if (data.output) {
+                cmdOutput.innerHTML += `<div>${data.output}</div>`;
             }
-        });
+            
+            // Check for completion status
+            if (data.status === 'complete') {
+                eventSource.close(); // Close the connection when done
+            }
+
+            // Scroll to the bottom of the output to always show the latest command output
+            cmdOutput.scrollTop = cmdOutput.scrollHeight;
+        };
+
+        eventSource.onerror = function() {
+            console.error("Error in receiving data from the server.");
+            eventSource.close(); // Close the connection if an error occurs
+        };
+    }
+
+    document.getElementById('cmdInput').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            const command = e.target.value;
+            e.target.value = '';
+            sendCommand(command);
+        }
+    });
 
         document.getElementById('toggleBtn').addEventListener('click', function() {
             const cmdPanel = document.getElementById('cmdPanel');
